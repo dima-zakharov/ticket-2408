@@ -1,0 +1,731 @@
+[TESTING][SECURITY]: SSRF prevention manual test plan (URL validation,
+allowlists, internal network protection)
+
+Goal
+
+   Produce a comprehensive manual test plan for validating Server-Side
+   Request Forgery (SSRF) attacks are prevented, protecting internal
+   networks and cloud metadata services from unauthorized access through
+   the gateway.
+
+Why This Is Critical
+
+   MCP Gateway is particularly vulnerable to SSRF because it:
+     * Fetches resources from user-provided URLs
+     * Proxies requests to registered MCP servers
+     * Federates with peer gateways
+     * Translates between protocols (stdio ↔ HTTP)
+
+   An SSRF vulnerability could allow attackers to:
+     * Access cloud metadata services (AWS 169.254.169.254, GCP, Azure)
+     * Scan internal networks
+     * Access internal services (databases, admin panels)
+     * Bypass firewalls and access controls
+
+Why Now?
+
+   Security testing is critical for GA release:
+    1. Production Readiness: Security must be validated before release
+    2. Compliance: Required by security standards and audits
+    3. Defense in Depth: Validates multiple protection layers
+    4. Attack Mitigation: Prevents common exploitation techniques
+    5. User Trust: Security issues erode confidence
+     __________________________________________________________________
+
+User Stories
+
+Story 1: Cloud Metadata Protection
+
+   As a cloud security administrator
+   I want cloud metadata endpoints blocked
+   So that attackers cannot steal IAM credentials or instance metadata
+
+Acceptance Criteria
+
+Feature: Cloud metadata protection
+  Background:
+    Given the gateway is running in a cloud environment
+
+  Scenario: AWS metadata endpoint blocked
+    When a request tries to fetch "http://169.254.169.254/latest/meta-data/"
+    Then the request should be blocked
+    And the response should indicate SSRF protection
+
+  Scenario: AWS metadata with DNS rebinding blocked
+    When a request tries to fetch a domain that resolves to 169.254.169.254
+    Then the request should be blocked after DNS resolution
+
+  Scenario: GCP metadata endpoint blocked
+    When a request tries to fetch "http://metadata.google.internal/"
+    Then the request should be blocked
+
+  Scenario: Azure metadata endpoint blocked
+    When a request tries to fetch "http://169.254.169.254/metadata/instance"
+    Then the request should be blocked
+
+Story 2: Internal Network Protection
+
+   As a network security administrator
+   I want internal IP ranges blocked
+   So that the gateway cannot be used to scan internal networks
+
+Acceptance Criteria
+
+Feature: Internal network protection
+  Scenario: Private IP ranges blocked
+    When a request tries to fetch from 10.0.0.0/8
+    Then the request should be blocked
+
+    When a request tries to fetch from 172.16.0.0/12
+    Then the request should be blocked
+
+    When a request tries to fetch from 192.168.0.0/16
+    Then the request should be blocked
+
+  Scenario: Localhost blocked
+    When a request tries to fetch from 127.0.0.1
+    Then the request should be blocked
+
+    When a request tries to fetch from localhost
+    Then the request should be blocked
+
+  Scenario: IPv6 localhost blocked
+    When a request tries to fetch from ::1
+    Then the request should be blocked
+
+Story 3: URL Validation
+
+   As a security administrator
+   I want URLs validated before fetching
+   So that malicious URLs are rejected
+
+Acceptance Criteria
+
+Feature: URL validation
+  Scenario: Protocol validation
+    When a request uses file:// protocol
+    Then the request should be blocked
+
+    When a request uses gopher:// protocol
+    Then the request should be blocked
+
+    When a request uses dict:// protocol
+    Then the request should be blocked
+
+  Scenario: URL parsing bypass attempts blocked
+    When a request contains URL with @ character (user:pass@host)
+    Then the actual destination host should be validated
+
+    When a request contains URL with # fragment before host
+    Then the URL should be properly parsed and validated
+
+Story 4: DNS Rebinding Protection
+
+   As a security administrator
+   I want DNS rebinding attacks prevented
+   So that attackers cannot bypass IP validation via DNS
+
+Acceptance Criteria
+
+Feature: DNS rebinding protection
+  Scenario: IP validated after DNS resolution
+    When a URL resolves to an internal IP
+    Then the request should be blocked
+    And blocking should occur after DNS resolution
+
+  Scenario: Multiple A records validated
+    When a domain has multiple A records (some internal, some external)
+    Then all resolved IPs should be validated
+    And request blocked if any IP is internal
+     __________________________________________________________________
+
+Architecture
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                     SSRF Protection Layer                            │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ URL Validation Pipeline                                     │    │
+│  │                                                             │    │
+│  │  1. Parse URL                                               │    │
+│  │     └── Reject malformed URLs                              │    │
+│  │     └── Reject dangerous protocols (file, gopher, dict)   │    │
+│  │                                                             │    │
+│  │  2. Validate Host                                           │    │
+│  │     └── Check against blocklist (IPs and domains)         │    │
+│  │     └── Check against allowlist (if configured)           │    │
+│  │                                                             │    │
+│  │  3. Resolve DNS                                             │    │
+│  │     └── Resolve hostname to IP(s)                          │    │
+│  │     └── Validate ALL resolved IPs                          │    │
+│  │                                                             │    │
+│  │  4. Validate Resolved IP                                    │    │
+│  │     └── Block private ranges (10/8, 172.16/12, 192.168/16)│    │
+│  │     └── Block localhost (127/8, ::1)                       │    │
+│  │     └── Block link-local (169.254/16, fe80::/10)          │    │
+│  │     └── Block cloud metadata IPs                           │    │
+│  │                                                             │    │
+│  │  5. Make Request                                            │    │
+│  │     └── Only if all validations pass                       │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ Blocked IP Ranges                                           │    │
+│  │                                                             │    │
+│  │  Private:     10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16   │    │
+│  │  Localhost:   127.0.0.0/8, ::1/128                         │    │
+│  │  Link-local:  169.254.0.0/16, fe80::/10                    │    │
+│  │  Cloud Meta:  169.254.169.254/32                           │    │
+│  │  Loopback:    0.0.0.0/8                                    │    │
+│  │  Broadcast:   255.255.255.255/32                           │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ Blocked Protocols                                           │    │
+│  │                                                             │    │
+│  │  file://    - Local file access                            │    │
+│  │  gopher://  - Legacy protocol, SSRF vector                 │    │
+│  │  dict://    - Dictionary protocol, info disclosure         │    │
+│  │  ftp://     - FTP access (optional)                        │    │
+│  │  ldap://    - LDAP injection vector                        │    │
+│  │  tftp://    - Trivial FTP                                  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+     __________________________________________________________________
+
+Test Environment Setup
+
+Configuration
+
+# SSRF protection settings
+export SSRF_PROTECTION_ENABLED=true
+export SSRF_BLOCK_PRIVATE_IPS=true
+export SSRF_BLOCK_LOCALHOST=true
+export SSRF_BLOCK_LINK_LOCAL=true
+export SSRF_BLOCK_CLOUD_METADATA=true
+export SSRF_ALLOWED_PROTOCOLS=http,https
+export SSRF_ALLOWLIST_DOMAINS=""  # Empty = block internal, allow external
+export SSRF_BLOCKLIST_DOMAINS="evil.com,malware.net"
+
+Test Setup Script
+
+#!/bin/bash
+# setup-ssrf-test.sh
+
+# Start gateway with SSRF protection
+export SSRF_PROTECTION_ENABLED=true
+make dev &
+sleep 5
+
+# Create test token
+export TOKEN=$(python -m mcpgateway.utils.create_jwt_token \
+  --username tester@example.com --secret "$JWT_SECRET_KEY")
+     __________________________________________________________________
+
+Test Cases
+
+TC-SSRF-001: AWS Metadata Endpoint Blocked
+
+   Objective: Verify AWS metadata service is blocked
+
+   Steps:
+# Step 1: Direct metadata access
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/latest/meta-data/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: IAM credentials endpoint
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: User data endpoint
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/latest/user-data"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * All requests return 400 Bad Request
+     * Response indicates SSRF protection triggered
+     * No metadata returned
+     __________________________________________________________________
+
+TC-SSRF-002: GCP Metadata Endpoint Blocked
+
+   Objective: Verify GCP metadata service is blocked
+
+   Steps:
+# Step 1: GCP metadata endpoint
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://metadata.google.internal/computeMetadata/v1/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: GCP metadata by IP
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/computeMetadata/v1/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * GCP metadata domain blocked
+     * IP-based access also blocked
+     __________________________________________________________________
+
+TC-SSRF-003: Azure Metadata Endpoint Blocked
+
+   Objective: Verify Azure metadata service is blocked
+
+   Steps:
+# Step 1: Azure IMDS endpoint
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/metadata/instance?api-version=2021-02-01"}'
+ \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: Azure identity endpoint
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://169.254.169.254/metadata/identity/oauth2/token"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * Azure metadata endpoints blocked
+     * No token or instance data returned
+     __________________________________________________________________
+
+TC-SSRF-004: Private IP Ranges Blocked
+
+   Objective: Verify private IP ranges are blocked
+
+   Steps:
+# Step 1: 10.0.0.0/8 range
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://10.0.0.1/admin"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: 172.16.0.0/12 range
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://172.16.0.1/internal"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: 192.168.0.0/16 range
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://192.168.1.1/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 4: Edge of range (172.31.255.255)
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://172.31.255.255/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * All private IP ranges blocked
+     * Edge cases also blocked
+     * 400 Bad Request returned
+     __________________________________________________________________
+
+TC-SSRF-005: Localhost Blocked
+
+   Objective: Verify localhost access is blocked
+
+   Steps:
+# Step 1: 127.0.0.1
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://127.0.0.1:8000/admin"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: localhost hostname
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://localhost:3000/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: 127.x.x.x variations
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://127.0.0.2/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 4: 0.0.0.0
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://0.0.0.0:8080/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * All localhost variations blocked
+     * 127.0.0.0/8 range blocked
+     * 0.0.0.0 blocked
+     __________________________________________________________________
+
+TC-SSRF-006: IPv6 Localhost Blocked
+
+   Objective: Verify IPv6 localhost is blocked
+
+   Steps:
+# Step 1: IPv6 localhost (::1)
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://[::1]:8000/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: IPv6 localhost long form
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://[0:0:0:0:0:0:0:1]/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: IPv6 mapped IPv4 localhost
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://[::ffff:127.0.0.1]/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * IPv6 localhost blocked
+     * IPv4-mapped IPv6 addresses blocked
+     * All representations blocked
+     __________________________________________________________________
+
+TC-SSRF-007: Dangerous Protocols Blocked
+
+   Objective: Verify dangerous protocols are blocked
+
+   Steps:
+# Step 1: file:// protocol
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"file:///etc/passwd"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: gopher:// protocol
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"gopher://evil.com:25/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: dict:// protocol
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"dict://evil.com:11111/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 4: ldap:// protocol
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"ldap://evil.com/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * All dangerous protocols blocked
+     * Only http:// and https:// allowed
+     * Clear error about unsupported protocol
+     __________________________________________________________________
+
+TC-SSRF-008: URL Parsing Bypass Attempts
+
+   Objective: Verify URL parsing bypasses are blocked
+
+   Steps:
+# Step 1: URL with credentials (user:pass@host)
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://evil.com@169.254.169.254/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: URL with fragment before host
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://example.com#@169.254.169.254/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: Decimal IP representation
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://2852039166/"}' \
+  http://localhost:8000/api/resources/fetch
+# 2852039166 = 169.254.169.254 in decimal
+
+# Step 4: Octal IP representation
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://0251.0376.0251.0376/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 5: Hex IP representation
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://0xa9fea9fe/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * All bypass attempts blocked
+     * URL parsing handles edge cases
+     * IP representations normalized and validated
+     __________________________________________________________________
+
+TC-SSRF-009: DNS Rebinding Protection
+
+   Objective: Verify DNS rebinding attacks are prevented
+
+   Steps:
+# Step 1: Set up DNS rebinding test
+# Use a domain that alternates between external and internal IP
+# (e.g., rebind.network or similar testing service)
+
+# Step 2: Test with rebinding domain
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://A.169.254.169.254.1time.192.0.2.1.forever.rebind.network/"}
+' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 3: Verify IP validated after DNS resolution
+
+   Expected Results:
+     * DNS resolution performed before request
+     * Resolved IP validated against blocklist
+     * Request blocked if resolved IP is internal
+     __________________________________________________________________
+
+TC-SSRF-010: MCP Server Registration SSRF
+
+   Objective: Verify SSRF protection on MCP server registration
+
+   Steps:
+# Step 1: Register server with internal URL
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"evil-server","url":"http://169.254.169.254/"}' \
+  http://localhost:8000/api/gateways
+
+# Step 2: Register server with localhost
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"local-server","url":"http://127.0.0.1:9000/"}' \
+  http://localhost:8000/api/gateways
+
+# Step 3: Verify registration blocked or URL validated
+
+   Expected Results:
+     * Server registration validates URL
+     * Internal URLs rejected
+     * Only approved URLs allowed for MCP servers
+     __________________________________________________________________
+
+TC-SSRF-011: Resource Fetch SSRF
+
+   Objective: Verify SSRF protection on resource fetch
+
+   Steps:
+# Step 1: Fetch resource with internal URL
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri":"http://10.0.0.1/secret-data"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: Fetch resource template with SSRF
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri":"http://internal-db:5432/"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * Resource fetch validates URLs
+     * Internal resources not accessible
+     * Only allowed external resources fetched
+     __________________________________________________________________
+
+TC-SSRF-012: Redirect Following SSRF
+
+   Objective: Verify SSRF protection when following redirects
+
+   Steps:
+# Step 1: External URL that redirects to internal
+# Set up external service that returns 302 to http://169.254.169.254/
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://external.example.com/redirect-to-metadata"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: Verify redirect target validated
+
+   Expected Results:
+     * Redirect targets validated
+     * Redirects to internal IPs blocked
+     * Multiple redirect hops all validated
+     __________________________________________________________________
+
+TC-SSRF-013: Webhook SSRF
+
+   Objective: Verify SSRF protection on webhook URLs
+
+   Steps:
+# Step 1: Configure webhook with internal URL
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"webhook_url":"http://169.254.169.254/"}' \
+  http://localhost:8000/api/webhooks
+
+# Step 2: Configure webhook with localhost
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"webhook_url":"http://localhost:8080/receive"}' \
+  http://localhost:8000/api/webhooks
+
+   Expected Results:
+     * Webhook URLs validated on configuration
+     * Internal webhook URLs rejected
+     * Only external webhook URLs allowed
+     __________________________________________________________________
+
+TC-SSRF-014: Valid External URLs Allowed
+
+   Objective: Verify legitimate external URLs work
+
+   Steps:
+# Step 1: Fetch valid external resource
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://api.github.com/"}' \
+  http://localhost:8000/api/resources/fetch
+
+# Step 2: Fetch from CDN
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://cdn.example.com/data.json"}' \
+  http://localhost:8000/api/resources/fetch
+
+   Expected Results:
+     * Valid external URLs work
+     * No false positives for legitimate requests
+     * Content returned correctly
+     __________________________________________________________________
+
+TC-SSRF-015: Allowlist Mode
+
+   Objective: Verify allowlist mode restricts to approved domains
+
+   Prerequisites:
+     * SSRF_ALLOWLIST_DOMAINS configured
+
+   Steps:
+# Step 1: Configure allowlist
+export SSRF_ALLOWLIST_DOMAINS="api.github.com,cdn.example.com"
+
+# Step 2: Access allowed domain
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://api.github.com/users"}' \
+  http://localhost:8000/api/resources/fetch
+# Should succeed
+
+# Step 3: Access non-allowed domain
+curl -s -w "\nStatus: %{http_code}\n" \
+  -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://other-api.com/data"}' \
+  http://localhost:8000/api/resources/fetch
+# Should fail
+
+   Expected Results:
+     * Only allowlisted domains accessible
+     * Non-allowlisted domains blocked
+     * Subdomain handling correct
+     __________________________________________________________________
+
+Test Matrix
+
+    Test Case  Cloud Metadata Private IPs Localhost Protocols Bypass DNS
+   TC-SSRF-001 ✓ (AWS)
+   TC-SSRF-002 ✓ (GCP)
+   TC-SSRF-003 ✓ (Azure)
+   TC-SSRF-004                ✓
+   TC-SSRF-005                            ✓
+   TC-SSRF-006                            ✓ (IPv6)
+   TC-SSRF-007                                      ✓
+   TC-SSRF-008                                                ✓
+   TC-SSRF-009                                                       ✓
+   TC-SSRF-010 ✓              ✓           ✓
+   TC-SSRF-011                ✓
+   TC-SSRF-012 ✓              ✓
+   TC-SSRF-013 ✓              ✓           ✓
+   TC-SSRF-014
+   TC-SSRF-015
+     __________________________________________________________________
+
+SSRF Attack Vectors Checklist
+
+     * [ ] Cloud metadata endpoints (AWS, GCP, Azure)
+     * [ ] Private IP ranges (10/8, 172.16/12, 192.168/16)
+     * [ ] Localhost (127/8, ::1, 0.0.0.0)
+     * [ ] Link-local (169.254/16 excluding metadata)
+     * [ ] Dangerous protocols (file, gopher, dict, ldap)
+     * [ ] URL parsing bypasses (@, #, encoding)
+     * [ ] IP representation variants (decimal, octal, hex)
+     * [ ] DNS rebinding attacks
+     * [ ] Redirect-based SSRF
+     * [ ] IPv6 variations
+     __________________________________________________________________
+
+Success Criteria
+
+     * [ ] All 15 test cases pass
+     * [ ] AWS/GCP/Azure metadata endpoints blocked
+     * [ ] All private IP ranges blocked
+     * [ ] Localhost variations blocked
+     * [ ] Dangerous protocols blocked
+     * [ ] URL parsing bypasses prevented
+     * [ ] DNS rebinding protected
+     * [ ] Redirect targets validated
+     * [ ] Valid external URLs work
+     __________________________________________________________________
