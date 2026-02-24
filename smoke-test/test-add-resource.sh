@@ -9,6 +9,6 @@ echo "Testing AWS metadata endpoints..."
 
 # User data endpoint
 curl -s -w "\nStatus: %{http_code}\n" \
-  -X POST "${HEADERS[@]}" \
-  -d '{"resource":{"uri":"http://www.listru.site","name":"listru","description":"listru","content":"test"}}' \
-  "http://0.0.0.0:$PORT/resources"
+	-X POST "${HEADERS[@]}" \
+	-d '{"resource":{"uri":"http://www.listru.site","name":"listru","description":"listru","content":"test"}}' \
+	"http://0.0.0.0:$PORT/resources"

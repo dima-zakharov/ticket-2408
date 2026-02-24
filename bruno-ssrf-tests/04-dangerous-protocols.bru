@@ -1,0 +1,151 @@
+meta {
+  name: TC-SSRF-007 Dangerous Protocols Blocked
+  method: POST
+  seq: 8
+}
+
+docs {
+  """
+  Test Case: TC-SSRF-007
+  Objective: Verify dangerous protocols are blocked
+  
+  Tests: file://, gopher://, dict://, ldap://
+  Expected: 400 or 403 response with protocol error
+  """
+}
+
+get {
+  url: {{base_url}}/resources/
+  req {
+    headers {
+      Authorization: Bearer {{token}}
+      Content-Type: application/json
+    }
+    body {
+      json {
+        resource {
+          uri: file:///etc/passwd
+          name: test-file-protocol
+          content: test
+        }
+      }
+    }
+  }
+
+  res {
+    status: in [400, 403]
+  }
+
+  assert {
+    res.status in [400, 403]
+    res.body ~ /SSRF|blocked|not allowed|protocol|unsupported/i
+  }
+}
+
+---
+
+meta {
+  name: TC-SSRF-007 Gopher Protocol Blocked
+  method: POST
+  seq: 9
+}
+
+get {
+  url: {{base_url}}/resources/
+  req {
+    headers {
+      Authorization: Bearer {{token}}
+      Content-Type: application/json
+    }
+    body {
+      json {
+        resource {
+          uri: gopher://evil.com:25/
+          name: test-gopher-protocol
+          content: test
+        }
+      }
+    }
+  }
+
+  res {
+    status: in [400, 403]
+  }
+
+  assert {
+    res.status in [400, 403]
+    res.body ~ /SSRF|blocked|not allowed|protocol|unsupported/i
+  }
+}
+
+---
+
+meta {
+  name: TC-SSRF-007 Dict Protocol Blocked
+  method: POST
+  seq: 10
+}
+
+get {
+  url: {{base_url}}/resources/
+  req {
+    headers {
+      Authorization: Bearer {{token}}
+      Content-Type: application/json
+    }
+    body {
+      json {
+        resource {
+          uri: dict://evil.com:11111/
+          name: test-dict-protocol
+          content: test
+        }
+      }
+    }
+  }
+
+  res {
+    status: in [400, 403]
+  }
+
+  assert {
+    res.status in [400, 403]
+    res.body ~ /SSRF|blocked|not allowed|protocol|unsupported/i
+  }
+}
+
+---
+
+meta {
+  name: TC-SSRF-007 LDAP Protocol Blocked
+  method: POST
+  seq: 11
+}
+
+get {
+  url: {{base_url}}/resources/
+  req {
+    headers {
+      Authorization: Bearer {{token}}
+      Content-Type: application/json
+    }
+    body {
+      json {
+        resource {
+          uri: ldap://evil.com/
+          name: test-ldap-protocol
+          content: test
+        }
+      }
+    }
+  }
+
+  res {
+    status: in [400, 403]
+  }
+
+  assert {
+    res.status in [400, 403]
+    res.body ~ /SSRF|blocked|not allowed|protocol|unsupported/i
+  }
+}
