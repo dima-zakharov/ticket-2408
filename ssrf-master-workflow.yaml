@@ -1,0 +1,60 @@
+id: ssrf-master-workflow
+
+info:
+  name: SSRF Complete Test Workflow
+  author: security-team
+  severity: info
+  description: Master workflow template that references all SSRF test templates
+  tags: ssrf,security,workflow
+
+workflows:
+  - template: ssrf-cloud-metadata.yaml
+    matchers:
+      - name: aws-metadata-direct
+      - name: aws-metadata-iam-credentials
+      - name: aws-metadata-user-data
+      - name: gcp-metadata-domain
+      - name: gcp-metadata-ip
+      - name: azure-metadata-imds
+      - name: azure-metadata-identity
+
+  - template: ssrf-private-ips.yaml
+    matchers:
+      - name: private-ip-10-range
+      - name: private-ip-172-16-range
+      - name: private-ip-192-168-range
+
+  - template: ssrf-localhost.yaml
+    matchers:
+      - name: localhost-127-0-0-1
+      - name: localhost-hostname
+      - name: localhost-ipv6-short
+
+  - template: ssrf-dangerous-protocols.yaml
+    matchers:
+      - name: protocol-file-passwd
+      - name: protocol-gopher
+      - name: protocol-dict
+      - name: protocol-ldap
+
+  - template: ssrf-url-parsing-bypass.yaml
+    matchers:
+      - name: bypass-url-credentials
+      - name: bypass-decimal-ip-metadata
+      - name: bypass-hex-ip-metadata
+
+  - template: ssrf-dns-rebinding.yaml
+    matchers:
+      - name: dns-rebind-nip-localhost
+      - name: dns-rebind-sslip
+
+  - template: ssrf-integration.yaml
+    matchers:
+      - name: integration-server-register-metadata
+      - name: integration-resource-fetch-metadata
+      - name: integration-webhook-metadata
+
+  - template: ssrf-allowlist-and-valid-urls.yaml
+    matchers:
+      - name: valid-external-github-api
+      - name: valid-external-json

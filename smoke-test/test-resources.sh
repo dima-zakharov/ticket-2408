@@ -5,7 +5,7 @@ set -xueo pipefail
 source ./00-env.sh
 
 
-curl -N "http://0.0.0.0:$PORT/resources" "${HEADERS[@]}" 
+curl -s "http://0.0.0.0:$PORT/resources" "${HEADERS[@]}" | yq -P 
 
 
 

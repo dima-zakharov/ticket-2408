@@ -1,0 +1,132 @@
+id: ssrf-cloud-metadata-protection
+
+info:
+  name: SSRF Cloud Metadata Protection Test
+  author: security-team
+  severity: info
+  description: Test suite for cloud metadata endpoint SSRF protection (TC-SSRF-001 to TC-SSRF-003)
+  tags: ssrf,security,cloud-metadata
+
+variables:
+  token: "{{TOKEN}}"
+
+requests:
+  # TC-SSRF-001: AWS Metadata Endpoint
+  - name: aws-metadata-direct
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/latest/meta-data/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+      - type: word
+        words:
+          - "SSRF"
+          - "blocked"
+          - "not allowed"
+        part: body
+        case-insensitive: true
+    extractors:
+      - type: status
+        status:
+          - 400
+          - 403
+
+  - name: aws-metadata-iam-credentials
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/latest/meta-data/iam/security-credentials/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: aws-metadata-user-data
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/latest/user-data"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  # TC-SSRF-002: GCP Metadata Endpoint
+  - name: gcp-metadata-domain
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://metadata.google.internal/computeMetadata/v1/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: gcp-metadata-ip
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/computeMetadata/v1/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  # TC-SSRF-003: Azure Metadata Endpoint
+  - name: azure-metadata-imds
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/metadata/instance?api-version=2021-02-01"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: azure-metadata-identity
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"http://169.254.169.254/metadata/identity/oauth2/token"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header

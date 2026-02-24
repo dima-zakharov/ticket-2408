@@ -1,0 +1,220 @@
+id: ssrf-integration-protection
+
+info:
+  name: SSRF Integration Point Protection Test
+  author: security-team
+  severity: info
+  description: Test suite for SSRF protection at integration points (TC-SSRF-010 to TC-SSRF-013)
+  tags: ssrf,security,integration
+
+variables:
+  token: "{{TOKEN}}"
+  admin_token: "{{ADMIN_TOKEN}}"
+
+requests:
+  # TC-SSRF-010: MCP Server Registration SSRF
+  
+  - name: integration-server-register-metadata
+    method: POST
+    path:
+      - "{{BaseURL}}/api/gateways"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"name":"evil-server","url":"http://169.254.169.254/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-server-register-localhost
+    method: POST
+    path:
+      - "{{BaseURL}}/api/gateways"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"name":"local-server","url":"http://127.0.0.1:9000/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-server-register-private
+    method: POST
+    path:
+      - "{{BaseURL}}/api/gateways"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"name":"internal-server","url":"http://10.0.0.1:8080/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  # TC-SSRF-011: Resource Fetch SSRF
+  
+  - name: integration-resource-fetch-private
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"uri":"http://10.0.0.1/secret-data"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-resource-fetch-internal-db
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"uri":"http://internal-db:5432/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-resource-fetch-metadata
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"uri":"http://169.254.169.254/latest/meta-data/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  # TC-SSRF-012: Redirect Following SSRF
+  # Note: These tests require an external server that redirects to internal IPs
+  
+  - name: integration-redirect-external-to-internal
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"https://httpbin.org/redirect-to?url=http://169.254.169.254/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+    # Tests redirect to metadata endpoint
+
+  - name: integration-redirect-chain
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"https://httpbin.org/redirect/5"}'
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 301
+          - 302
+        part: header
+    # Tests redirect chain handling (should not SSRF)
+
+  - name: integration-redirect-to-localhost
+    method: POST
+    path:
+      - "{{BaseURL}}/api/resources/fetch"
+    headers:
+      Authorization: "Bearer {{token}}"
+      Content-Type: "application/json"
+    body: '{"url":"https://httpbin.org/redirect-to?url=http://127.0.0.1/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  # TC-SSRF-013: Webhook SSRF
+  
+  - name: integration-webhook-metadata
+    method: POST
+    path:
+      - "{{BaseURL}}/api/webhooks"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"webhook_url":"http://169.254.169.254/"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-webhook-localhost
+    method: POST
+    path:
+      - "{{BaseURL}}/api/webhooks"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"webhook_url":"http://localhost:8080/receive"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-webhook-private
+    method: POST
+    path:
+      - "{{BaseURL}}/api/webhooks"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"webhook_url":"http://192.168.1.100/hook"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
+
+  - name: integration-webhook-nip-io
+    method: POST
+    path:
+      - "{{BaseURL}}/api/webhooks"
+    headers:
+      Authorization: "Bearer {{admin_token}}"
+      Content-Type: "application/json"
+    body: '{"webhook_url":"http://127.0.0.1.nip.io/hook"}'
+    matchers:
+      - type: status
+        status:
+          - 400
+          - 403
+        part: header
