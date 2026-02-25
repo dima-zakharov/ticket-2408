@@ -33,7 +33,10 @@ test.describe("Resources API", () => {
 			},
 		});
 
-		expect(response.ok(), `Failed with status ${response.status()}`).toBeTruthy();
+		expect(
+			response.ok(),
+			`Failed with status ${response.status()}`,
+		).toBeTruthy();
 	});
 
 	test("add resource", async ({ request }) => {
@@ -62,7 +65,10 @@ test.describe("Resources API", () => {
 			},
 		});
 
-		expect(response.ok(), `Failed with status ${response.status()}`).toBeTruthy();
+		expect(
+			response.ok(),
+			`Failed with status ${response.status()}`,
+		).toBeTruthy();
 
 		const resources = await response.json();
 		expect(Array.isArray(resources)).toBeTruthy();
@@ -86,12 +92,12 @@ test.describe("Resources API", () => {
 		});
 
 		const resources = await getResourcesResponse.json();
-		
+
 		// Try to find test resource by name
 		let myResource = resources.find(
 			(r: { name: string }) => r.name === "listru-test-unique",
 		);
-		
+
 		// If not found, try to create it first
 		if (!myResource) {
 			const createResponse = await request.post("/resources", {
@@ -100,7 +106,7 @@ test.describe("Resources API", () => {
 				},
 				data: testResource,
 			});
-			
+
 			if (createResponse.status() === 200) {
 				const body = await createResponse.json();
 				myResource = { id: body.id };
@@ -127,6 +133,9 @@ test.describe("Resources API", () => {
 			},
 		});
 
-		expect(response.ok(), `Failed with status ${response.status()}`).toBeTruthy();
+		expect(
+			response.ok(),
+			`Failed with status ${response.status()}`,
+		).toBeTruthy();
 	});
 });
