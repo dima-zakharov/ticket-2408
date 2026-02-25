@@ -1,0 +1,31 @@
+meta {
+  name: health test
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{BASE_URL}}/resources
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+  Accept: application/json, application/x-ndjson, text/event-stream
+
+}
+
+body:json { {
+  "resource": {
+    "uri": "http://www.listru-test-unique.site",
+    "name": "listru-test-unique",
+    "description": "listru-test-unique",
+    "content": "test"
+    }
+  }
+}
+
+assert {
+  res.status: in [200, 409]
+}

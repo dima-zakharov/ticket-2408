@@ -1,0 +1,18 @@
+meta {
+  name: health test
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{BASE_URL}}/resources
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+}
+
+assert {
+  res.status: in [200]
+}
