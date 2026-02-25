@@ -1,1 +1,14 @@
-{}
+{
+  "version": "1",
+  "name": "Ticket-2408-Tests",
+  "type": "collection",
+  "root": {
+    "request": {
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json, application/x-ndjson, text/event-stream",
+        "Authorization": "Bearer {{TOKEN}}"
+      }
+    }
+  }
+}
