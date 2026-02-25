@@ -32,3 +32,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 **/.token# dependencies (bun install)
 *.tsbuildinfo
 test-results/
+**/results.html
