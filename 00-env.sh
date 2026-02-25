@@ -3,7 +3,7 @@
 set -ueo pipefail
 
 export PORT=${PORT:=4444}
-export BASE_URL=http://localhost:$PORT/
+export BASE_URL=http://localhost:$PORT
 
 # env vars
 export BASIC_AUTH_PASSWORD="$(cat ~/.local/ticket-24008-pass)"
@@ -20,12 +20,14 @@ export SSRF_ALLOW_PRIVATE_NETWORKS=false
 export SSRF_ALLOWED_NETWORKS=""
 export SSRF_DNS_FAIL_CLOSED=true
 
+export PYTHONWARNINGS="ignore"
+export LOG_LEVEL="ERROR"
 export MCPGATEWAY_BEARER_TOKEN="$(
-	uvx --from mcp-contextforge-gateway \
+		uvx --from mcp-contextforge-gateway \
 		python -m mcpgateway.utils.create_jwt_token \
 		--username $PLATFORM_ADMIN_EMAIL \
 		--exp 10080 --secret $BASIC_AUTH_PASSWORD \
-		2>/dev/null \
+		2>"$(readlink -f $0).log" \
 )"
 
 

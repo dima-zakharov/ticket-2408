@@ -1,0 +1,9 @@
+[project]
+name = "ticket-2408"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp-contextforge-gateway>=1.0.0rc1",
+]

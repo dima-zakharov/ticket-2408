@@ -1,137 +1,147 @@
-# SSRF Test Templates for Nuclei
+# SSRF Security Tests - Bruno Collection
 
-Comprehensive SSRF (Server-Side Request Forgery) test templates for the MCP Context Forge gateway.
-
-## Test Coverage
-
-| Template | Test Cases | Description |
-|----------|------------|-------------|
-| `ssrf-cloud-metadata.yaml` | TC-SSRF-001 to 003 | AWS, GCP, Azure metadata protection |
-| `ssrf-private-ips.yaml` | TC-SSRF-004 | Private IP range blocking (10/8, 172.16/12, 192.168/16) |
-| `ssrf-localhost.yaml` | TC-SSRF-005 to 006 | Localhost and IPv6 localhost blocking |
-| `ssrf-dangerous-protocols.yaml` | TC-SSRF-007 | Protocol blocking (file, gopher, dict, ldap, etc.) |
-| `ssrf-bypass-attempts.yaml` | TC-SSRF-008 | URL parsing bypass attempts (encoding, IP formats) |
-| `ssrf-dns-rebinding.yaml` | TC-SSRF-009 | DNS rebinding protection |
-| `ssrf-integration.yaml` | TC-SSRF-010 to 013 | Integration point SSRF (registration, resources, webhooks, redirects) |
-| `ssrf-allowlist.yaml` | TC-SSRF-014 to 015 | Valid URLs and allowlist mode |
+This is a Bruno collection for testing SSRF (Server-Side Request Forgery) protection in the MCP Gateway.
 
 ## Prerequisites
 
-1. Install Nuclei:
-```bash
-go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-```
+1. Install Bruno: https://www.usebruno.com/downloads
+2. Gateway must be running on `http://localhost:4444`
+3. Valid JWT token in `bruno.env`
 
-2. Set environment variables:
-```bash
-export TOKEN="your-jwt-token"
-export ADMIN_TOKEN="your-admin-jwt-token"
-export BASE_URL="http://localhost:8000"
-```
+## Test Coverage
+
+| File | Test Cases | Description |
+|------|------------|-------------|
+| `01-aws-metadata.bru` | TC-SSRF-001 | AWS metadata endpoint protection |
+| `02-private-ips.bru` | TC-SSRF-004 | Private IP range blocking (10/8, 172.16/12, 192.168/16) |
+| `03-localhost.bru` | TC-SSRF-005 | Localhost and 0.0.0.0 blocking |
+| `04-dangerous-protocols.bru` | TC-SSRF-007 | Protocol blocking (file, gopher, dict, ldap) |
 
 ## Running Tests
 
-### Run all SSRF tests:
+### Using Bruno CLI
+
 ```bash
-nuclei -t . -var TOKEN=$TOKEN -var ADMIN_TOKEN=$ADMIN_TOKEN -var BASE_URL=$BASE_URL
+# Install bru CLI
+npm install -g @usebruno/cli
+
+# Run all tests
+bru run ./bruno-ssrf-tests --env Default
+
+# Run specific test file
+bru run ./bruno-ssrf-tests/01-aws-metadata.bru --env Default
 ```
 
-### Run specific test category:
+### Using Bruno UI
+
+1. Open Bruno
+2. Click "Import Collection"
+3. Select the `bruno-ssrf-tests` folder
+4. Select the "Default" environment
+5. Click "Run Collection"
+
+### Using Shell Script (No Bruno required)
+
 ```bash
-# Cloud metadata tests
-nuclei -t ssrf-cloud-metadata.yaml -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
-
-# Private IP tests
-nuclei -t ssrf-private-ips.yaml -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
-
-# Bypass attempt tests
-nuclei -t ssrf-bypass-attempts.yaml -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
-```
-
-### Run with output file:
-```bash
-nuclei -t . \
-  -var TOKEN=$TOKEN \
-  -var ADMIN_TOKEN=$ADMIN_TOKEN \
-  -var BASE_URL=$BASE_URL \
-  -o ssrf-test-results.txt
-```
-
-### Run with verbose output:
-```bash
-nuclei -t . -v -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
+cd bruno-ssrf-tests
+./run-tests.sh
 ```
 
 ## Expected Results
 
 All SSRF protection tests should return:
 - **Status 400** (Bad Request) or **403** (Forbidden)
-- Response body may contain SSRF protection messages
+- Response body should contain SSRF protection keywords
 
-Valid external URL tests should return:
-- **Status 200** (OK)
+## Environment Variables
 
-## Test Matrix
+Edit `bruno.env` to configure:
 
-```
-┌─────────────────────────────┬──────────┬──────────┬──────────┬──────────┐
-│ Test Category               │ Requests │ Expected │ Critical │ Status   │
-├─────────────────────────────┼──────────┼──────────┼──────────┼──────────┤
-│ Cloud Metadata              │ 7        │ 400/403  │ YES      │ MUST     │
-│ Private IPs                 │ 7        │ 400/403  │ YES      │ MUST     │
-│ Localhost                   │ 10       │ 400/403  │ YES      │ MUST     │
-│ Dangerous Protocols         │ 11       │ 400/403  │ YES      │ MUST     │
-│ Bypass Attempts             │ 16       │ 400/403  │ YES      │ MUST     │
-│ DNS Rebinding               │ 8        │ 400/403  │ YES      │ MUST     │
-│ Integration Points          │ 12       │ 400/403  │ YES      │ MUST     │
-│ Valid URLs                  │ 12       │ 200      │ YES      │ MUST     │
-├─────────────────────────────┼──────────┼──────────┼──────────┼──────────┤
-│ TOTAL                       │ 83       │ -        │ -        │ -        │
-└─────────────────────────────┴──────────┴──────────┴──────────┴──────────┘
+```json
+{
+  "base_url": "http://localhost:4444",
+  "token": "your-jwt-token-here"
+}
 ```
 
-## Customization
+## Generate New Token
 
-### Add custom headers:
 ```bash
-nuclei -t . -H "X-Custom-Header: value" -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
+source ./00-env.sh
+echo $TOKEN
 ```
 
-### Rate limiting:
+Update `bruno.env` with the new token value.
+
+## Starting Gateway with SSRF Protection
+
+The gateway must be restarted with SSRF environment variables:
+
 ```bash
-nuclei -t . -rate-limit 10 -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
+# Stop existing gateway
+pkill -f mcpgateway
+
+# Start with SSRF protection
+SSRF_PROTECTION_ENABLED=true \
+SSRF_BLOCK_PRIVATE_IPS=true \
+SSRF_BLOCK_LOCALHOST=true \
+SSRF_BLOCK_CLOUD_METADATA=true \
+SSRF_ALLOWED_PROTOCOLS=http,https \
+make dev
 ```
 
-### Timeout adjustment:
-```bash
-nuclei -t . -timeout 30 -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
+## Test Format
+
+Each `.bru` file contains one or more test requests in Bruno's declarative format:
+
+```bru
+meta {
+  name: Test Name
+  method: POST
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/resources/
+  req {
+    headers {
+      Authorization: Bearer {{token}}
+      Content-Type: application/json
+    }
+    body {
+      json {
+        resource {
+          uri: http://malicious-url/
+          name: test-name
+          content: test
+        }
+      }
+    }
+  }
+
+  assert {
+    res.status in [400, 403]
+    res.body ~ /SSRF|blocked/i
+  }
+}
 ```
 
 ## Troubleshooting
 
-### Tests failing with connection errors:
-```bash
-# Check gateway is running
-curl -s http://localhost:8000/health
+### Tests failing with 401
+- Token expired - generate new token and update `bruno.env`
 
-# Check token is valid
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/me
-```
+### Tests failing with 404
+- Check gateway is running: `curl http://localhost:4444/health`
+- Verify endpoint path is correct
 
-### Tests not matching expected status:
-```bash
-# Run with verbose to see full response
-nuclei -t ssrf-cloud-metadata.yaml -v -var TOKEN=$TOKEN -var BASE_URL=$BASE_URL
-```
+### Tests returning 200 instead of 400/403
+- Gateway not started with SSRF protection enabled
+- Restart gateway with SSRF environment variables (see above)
 
 ## Related Files
 
-- `mcpgateway/utils/url_validator.py` - URL validation logic
-- `mcpgateway/services/resource_service.py` - Resource fetching
-- `mcpgateway/services/gateway_service.py` - Gateway registration
-
-## References
-
-- [OWASP SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery)
-- [Nuclei Documentation](https://docs.nuclei.sh/)
-- [GitHub Issue #2408](https://github.com/IBM/mcp-context-forge/issues/2408)
+- `ssrf-cloud-metadata.yaml` - Original Nuclei template
+- `ssrf-private-ips.yaml` - Original Nuclei template
+- `00-env.sh` - Environment configuration
+- `run-scenarios.sh` - Nuclei test runner

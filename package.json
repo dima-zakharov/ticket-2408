@@ -1,0 +1,15 @@
+{
+	"name": "playwright-test",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"test": "playwright test",
+		"fmt": "biome format --write .",
+		"check": "biome check --apply ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.4",
+		"@playwright/test": "^1.58.2",
+		"typescript": "^5.3.3"
+	}
+}

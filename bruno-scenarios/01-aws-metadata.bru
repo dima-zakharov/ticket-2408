@@ -1,0 +1,32 @@
+info:
+  name: TC-SSRF-001 AWS Metadata Endpoint Blocked
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url}}/resources/"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: "Bearer {{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "resource": {
+          "uri": "http://169.254.169.254/latest/meta-data/",
+          "name": "aws-metadata-test",
+          "content": "test"
+        }
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: in
+      value: "[400, 403]"
+    - expression: res.body
+      operator: matches
+      value: "/SSRF|blocked|not allowed|private|internal/i"

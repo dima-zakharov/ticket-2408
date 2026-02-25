@@ -1,0 +1,100 @@
+info:
+  name: TC-SSRF-005 Localhost 127.0.0.1 Blocked
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{base_url}}/resources/"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: "Bearer {{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "resource": {
+          "uri": "http://127.0.0.1:8000/admin",
+          "name": "test-localhost-127",
+          "content": "test"
+        }
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: in
+      value: "[400, 403]"
+    - expression: res.body
+      operator: matches
+      value: "/SSRF|blocked|not allowed|private|internal/i"
+
+---
+info:
+  name: TC-SSRF-005 Localhost Hostname Blocked
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{base_url}}/resources/"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: "Bearer {{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "resource": {
+          "uri": "http://localhost:3000/",
+          "name": "test-localhost-hostname",
+          "content": "test"
+        }
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: in
+      value: "[400, 403]"
+    - expression: res.body
+      operator: matches
+      value: "/SSRF|blocked|not allowed|private|internal/i"
+
+---
+info:
+  name: TC-SSRF-005 Localhost 0.0.0.0 Blocked
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{base_url}}/resources/"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: "Bearer {{token}}"
+  body:
+    type: json
+    data: |-
+      {
+        "resource": {
+          "uri": "http://0.0.0.0:8080/",
+          "name": "test-localhost-0000",
+          "content": "test"
+        }
+      }
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: in
+      value: "[400, 403]"
+    - expression: res.body
+      operator: matches
+      value: "/SSRF|blocked|not allowed|private|internal/i"

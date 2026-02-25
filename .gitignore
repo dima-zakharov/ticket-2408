@@ -1,3 +1,34 @@
-mcp.db*
+
 **/.b*
-**/.token
+.cache
+# caches
+# code coverage
+coverage
+dist
+# dotenv environment variable files
+.DS_Store
+.env
+.env.development.local
+.env.local
+.env.production.local
+.env.test.local
+.eslintcache
+# Finder (MacOS) folder config
+.idea
+# IntelliJ based IDEs
+*.lcov
+_.log
+*.log
+*.lock
+
+logs
+mcp.db*
+node_modules
+out
+# output
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+*.tgz
+.token
+**/.token# dependencies (bun install)
+*.tsbuildinfo
+test-results/

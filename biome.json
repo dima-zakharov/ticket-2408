@@ -1,0 +1,8 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+	"files": {
+		"includes": ["**", "!!**/.venv/**", "!!**/node_modules/**", "!!**/dist/**"],
+		"ignoreUnknown": true,
+		"maxSize": 2097152
+	}
+}
