@@ -9,13 +9,6 @@ post {
   body: json
 }
 
-headers {
-  Content-Type: application/json
-  Authorization: Bearer {{TOKEN}}
-  Accept: application/json, application/x-ndjson, text/event-stream
-
-}
-
 body:json { {
   "resource": {
     "uri": "http://www.listru-test-unique.site",

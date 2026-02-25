@@ -8,11 +8,6 @@ get {
   url: {{BASE_URL}}/resources
 }
 
-headers {
-  Content-Type: application/json
-  Authorization: Bearer {{TOKEN}}
-}
-
 assert {
   res.status: in [200]
 }
