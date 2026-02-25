@@ -25,18 +25,17 @@ export BASIC_AUTH_PASSWORD="$(tr -d '\r\n' < ~/.local/ticket-2408-pass)"
 export JWT_SECRET_KEY=$BASIC_AUTH_PASSWORD
 
 
-export MCPGATEWAY_BEARER_TOKEN="$(
+export TOKEN="$(
 		uv run python -m mcpgateway.utils.create_jwt_token \
 		--username $PLATFORM_ADMIN_EMAIL \
 		--exp 10080 --secret $BASIC_AUTH_PASSWORD \
 		2>/dev/null  \
 )"
 
-export TOKEN="$MCPGATEWAY_BEARER_TOKEN"
 echo $TOKEN > ~/.local/ticket-2408.token
 
 export HEADERS=(
-	-H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN"
+	-H "Authorization: Bearer $TOKEN"
 	-H "Content-Type: application/json; charset=utf-8"
 	-H "Accept: application/json, application/x-ndjson, text/event-stream"
 )

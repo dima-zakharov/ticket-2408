@@ -4,8 +4,6 @@ set -ueo pipefail
 
 source ./00-env.sh
 
-
-# User data endpoint
-curl -v -w "\nStatus: %{http_code}\n" \
+curl -s -w "\nStatus: %{http_code}\n" \
 	-X GET "${HEADERS[@]}" \
 	"http://0.0.0.0:$PORT/health"
