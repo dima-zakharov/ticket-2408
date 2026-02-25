@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"private": true,
 	"scripts": {
-		"test": "source ./00-env.sh && playwright test",
+		"smoke-test": "source ./00-env.sh && playwright test",
 		"fmt": "biome format --write .",
 		"check": "biome check --apply ."
 	},

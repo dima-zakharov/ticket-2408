@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-	testDir: "./tests",
+	testDir: "./smoke-playwrite",
 	fullyParallel: true,
 	reporter: [
 		["list"],

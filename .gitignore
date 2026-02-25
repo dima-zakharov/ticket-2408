@@ -34,3 +34,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 test-results/
 **/results.html
 *.whl
+
+
+# Added by cargo
+
+/target
