@@ -3,11 +3,6 @@
 set -ueo pipefail
 
 export PORT=${PORT:=4444}
-export BASE_URL=http://localhost:$PORT
-
-# env vars
-export BASIC_AUTH_PASSWORD="$(tr -d '\r\n' < ~/.local/ticket-2408-pass)"
-export JWT_SECRET_KEY=$BASIC_AUTH_PASSWORD
 export MCPGATEWAY_UI_ENABLED=true
 export MCPGATEWAY_ADMIN_API_ENABLED=true
 export PLATFORM_ADMIN_EMAIL=admin@example.com
@@ -23,6 +18,13 @@ export SSRF_DNS_FAIL_CLOSED=true
 
 export PYTHONWARNINGS="ignore"
 export LOG_LEVEL="ERROR"
+
+export BASE_URL=http://localhost:$PORT
+
+export BASIC_AUTH_PASSWORD="$(tr -d '\r\n' < ~/.local/ticket-2408-pass)"
+export JWT_SECRET_KEY=$BASIC_AUTH_PASSWORD
+
+
 export MCPGATEWAY_BEARER_TOKEN="$(
 		uv run python -m mcpgateway.utils.create_jwt_token \
 		--username $PLATFORM_ADMIN_EMAIL \
@@ -31,7 +33,7 @@ export MCPGATEWAY_BEARER_TOKEN="$(
 )"
 
 export TOKEN="$MCPGATEWAY_BEARER_TOKEN"
-echo $TOKEN > .token
+echo $TOKEN > ~/.local/ticket-2408.token
 
 export HEADERS=(
 	-H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN"

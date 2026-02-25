@@ -1,4 +1,4 @@
-PORT ?= 8080
+SHELL := /bin/bash
 
 .PHONY: help start stop
 
@@ -9,7 +9,7 @@ help:
 	@echo "  stop   - Stop the MCP gateway server"
 
 start:
-	source ./00-env.sh && tmux new-session -d -s gateway "uv run mcpgateway --host 0.0.0.0 --port $(PORT)" \; pipe-pane 'cat > mcpgateway.log'
+	bash 01-start-gateway.sh
 
 stop:
-	source ./00-env.sh && tmux kill-session -t gateway
+	bash 02-stop-gateway.sh
