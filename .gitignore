@@ -39,3 +39,4 @@ test-results/
 # Added by cargo
 
 /target
+**/reports 
