@@ -1,0 +1,14 @@
+meta {
+  name: health test
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{BASE_URL}}/resources/{{delId}}
+}
+
+assert {
+  res.status: in [200]
+}
+

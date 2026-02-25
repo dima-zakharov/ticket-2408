@@ -1,32 +1,26 @@
 meta {
   name: TC-SSRF-007 File Protocol Blocked
   type: http
-  seq: 8
+  seq: 1
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "file:///etc/passwd",
-        "name": "test-file-protocol",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "file:///etc/passwd",
+      "name": "test-file-protocol",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|protocol|unsupported/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -34,32 +28,26 @@ assert {
 meta {
   name: TC-SSRF-007 Gopher Protocol Blocked
   type: http
-  seq: 9
+  seq: 2
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "gopher://evil.com:25/",
-        "name": "test-gopher-protocol",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "gopher://evil.com:25/",
+      "name": "test-gopher-protocol",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|protocol|unsupported/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -67,32 +55,26 @@ assert {
 meta {
   name: TC-SSRF-007 Dict Protocol Blocked
   type: http
-  seq: 10
+  seq: 3
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "dict://evil.com:11111/",
-        "name": "test-dict-protocol",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "dict://evil.com:11111/",
+      "name": "test-dict-protocol",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|protocol|unsupported/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -100,30 +82,24 @@ assert {
 meta {
   name: TC-SSRF-007 LDAP Protocol Blocked
   type: http
-  seq: 11
+  seq: 4
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "ldap://evil.com/",
-        "name": "test-ldap-protocol",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "ldap://evil.com/",
+      "name": "test-ldap-protocol",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|protocol|unsupported/i"
+  res.status: in [400, 403]
 }

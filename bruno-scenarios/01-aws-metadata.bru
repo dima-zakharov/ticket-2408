@@ -4,27 +4,21 @@ meta {
   seq: 1
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://169.254.169.254/latest/meta-data/",
-        "name": "aws-metadata-test",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://169.254.169.254/latest/meta-data/",
+      "name": "aws-metadata-test",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }

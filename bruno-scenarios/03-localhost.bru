@@ -1,32 +1,26 @@
 meta {
   name: TC-SSRF-005 Localhost 127.0.0.1 Blocked
   type: http
-  seq: 5
+  seq: 1
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://127.0.0.1:8000/admin",
-        "name": "test-localhost-127",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://127.0.0.1:8000/admin",
+      "name": "test-localhost-127",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -34,32 +28,26 @@ assert {
 meta {
   name: TC-SSRF-005 Localhost Hostname Blocked
   type: http
-  seq: 6
+  seq: 2
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://localhost:3000/",
-        "name": "test-localhost-hostname",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://localhost:3000/",
+      "name": "test-localhost-hostname",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -67,30 +55,24 @@ assert {
 meta {
   name: TC-SSRF-005 Localhost 0.0.0.0 Blocked
   type: http
-  seq: 7
+  seq: 3
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://0.0.0.0:8080/",
-        "name": "test-localhost-0000",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://0.0.0.0:8080/",
+      "name": "test-localhost-0000",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }

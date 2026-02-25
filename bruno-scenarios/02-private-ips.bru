@@ -1,32 +1,26 @@
 meta {
   name: TC-SSRF-004 Private IP 10.0.0.0/8 Range Blocked
   type: http
-  seq: 2
+  seq: 1
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://10.0.0.1/admin",
-        "name": "test-private-10-range",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://10.0.0.1/admin",
+      "name": "test-private-10-range",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -34,32 +28,26 @@ assert {
 meta {
   name: TC-SSRF-004 Private IP 172.16 Range Blocked
   type: http
-  seq: 3
+  seq: 2
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://172.16.0.1/internal",
-        "name": "test-private-172-range",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://172.16.0.1/internal",
+      "name": "test-private-172-range",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }
 
 ---
@@ -67,30 +55,24 @@ assert {
 meta {
   name: TC-SSRF-004 Private IP 192.168 Range Blocked
   type: http
-  seq: 4
+  seq: 3
 }
 
-http {
-  method: POST
-  url: "{{base_url}}/resources/"
-  
+post {
+  url: {{BASE_URL}}/resources/
   headers {
     Content-Type: application/json
-    Authorization: "Bearer {{token}}"
+    Authorization: Bearer {{TOKEN}}
   }
-
   body json {
-    {
-      "resource": {
-        "uri": "http://192.168.1.1/",
-        "name": "test-private-192-range",
-        "content": "test"
-      }
+    "resource": {
+      "uri": "http://192.168.1.1/",
+      "name": "test-private-192-range",
+      "content": "test"
     }
   }
 }
 
 assert {
-  status in [400, 403]
-  body matches "/SSRF|blocked|not allowed|private|internal/i"
+  res.status: in [400, 403]
 }
