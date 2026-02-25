@@ -27,7 +27,7 @@ export MCPGATEWAY_BEARER_TOKEN="$(
 		python -m mcpgateway.utils.create_jwt_token \
 		--username $PLATFORM_ADMIN_EMAIL \
 		--exp 10080 --secret $BASIC_AUTH_PASSWORD \
-		2>"$(readlink -f $0).log" \
+		2>/dev/null  \
 )"
 
 
