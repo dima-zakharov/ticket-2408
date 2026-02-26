@@ -79,14 +79,19 @@ jobs:
           fi
 
       - name: Upload Pages Artifact
-        # This ensures the report is uploaded even if tests fail
-        if: always() && github.ref == 'refs/heads/main' 
+        if: always() 
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'public'
 
       - name: Deploy to GitHub Pages
-        # This ensures the deployment triggers even if tests fail
-        if: always() && github.ref == 'refs/heads/main'
+        if: always()
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Add Link to Summary
+        if: always()
+        run: |
+          echo "### 🚀 Test Report Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "The Bruno test results are available here:" >> $GITHUB_STEP_SUMMARY
+          echo "[View Report](https://dima-zakharov.github.io/ticket-2408/)" >> $GITHUB_STEP_SUMMARY
