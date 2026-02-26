@@ -79,11 +79,12 @@ jobs:
           fi
 
       - name: Upload Pages Artifact
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/main'  # Add 'always() &&' here
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'public'
 
       - name: Deploy to GitHub Pages
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/main'  # Add 'always() &&' here
+        id: deployment
         uses: actions/deploy-pages@v4
