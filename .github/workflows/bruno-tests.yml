@@ -67,7 +67,7 @@ jobs:
         run: make stop
         if: always()
 
-      - name: Upload Bruno Test Report
+      - name: Upload Bruno Test Report (Artifact)
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -75,12 +75,35 @@ jobs:
           path: bruno-scenarios/results.html
           retention-days: 7
 
+      - name: Deploy Report to GitHub Pages
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: bruno-scenarios
+          destination_dir: .
+          keep_files: false
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+
       - name: Display Test Report
         if: always()
         run: |
           if [ -f bruno-scenarios/results.html ]; then
             echo "## Bruno Test Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "🌐 **View rendered report:** [Open in Browser](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/results.html)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "📥 **Download artifact:** Click on **bruno-test-report** in the artifacts section above" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details>" >> $GITHUB_STEP_SUMMARY
+            echo "<summary>View raw HTML source</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo '```html' >> $GITHUB_STEP_SUMMARY
             cat bruno-scenarios/results.html >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
           fi
