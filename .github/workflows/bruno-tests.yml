@@ -67,54 +67,23 @@ jobs:
 
       - name: Run Bruno Tests
         run: make test-bruno
-
-      - name: Stop MCP Gateway Server
-        run: make stop
-        if: always()
-
-      - name: Upload Bruno Test Report (Artifact)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bruno-test-report
-          path: bruno-scenarios/results.html
-          retention-days: 7
+        # This will fail the job, which is good, but we need the next steps to run anyway
 
       - name: Prepare Report for Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: always() # <--- CRITICAL: Runs even if tests fail
         run: |
           mkdir -p public
-          cp bruno-scenarios/results.html public/index.html
+          # Copy only if the file exists to avoid errors
+          if [ -f bruno-scenarios/results.html ]; then
+            cp bruno-scenarios/results.html public/index.html
+          fi
 
       - name: Upload Pages Artifact
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'public'  # This must contain your index.html
+          path: 'public'
 
       - name: Deploy to GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
-        id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Display Test Report
-        if: always()
-        run: |
-          if [ -f bruno-scenarios/results.html ]; then
-            echo "## Bruno Test Report" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-              echo "🌐 **View rendered report:** [Open in Browser](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/)" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-            echo "📥 **Download artifact:** Click on **bruno-test-report** in the artifacts section above" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "<details>" >> $GITHUB_STEP_SUMMARY
-            echo "<summary>View raw HTML source</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```html' >> $GITHUB_STEP_SUMMARY
-            cat bruno-scenarios/results.html >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
-          fi
