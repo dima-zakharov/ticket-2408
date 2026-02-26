@@ -3,7 +3,9 @@
 	"version": "1.0.0",
 	"private": true,
 	"scripts": {
+		"postinstall": "playwright install chromium --with-deps",
 		"smoke-test": "source ./00-env.sh && playwright test",
+		"test-login": "playwright test tests/01-auth",
 		"fmt": "biome format --write .",
 		"check": "biome check --apply ."
 	},

@@ -24,6 +24,12 @@ assert {
   res.status: in [400]
 }
 
+script:pre-request {
+  const iterationLabel = bru.getVar('name');
+  if (iterationLabel) {
+    bru.setIterationName(iterationLabel);
+  }
+}
 
 script:post-response {
     const body = res.getBody();
