@@ -4,8 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
-dependencies = []
+dependencies = [
+#    "mcp-contextforge-gateway>=1.0.0rc1",
+]
 
 [tool.uv.sources]
 mcp-contextforge-gateway = { path = "mcp_contextforge_gateway-1.0.0rc1-py3-none-any.whl" }
+
 

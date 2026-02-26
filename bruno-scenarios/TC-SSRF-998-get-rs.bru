@@ -1,0 +1,27 @@
+meta {
+  name: health test
+  type: http
+  seq: 998
+}
+
+get {
+  url: {{BASE_URL}}/resources
+}
+
+assert {
+  res.status: in [200]
+}
+
+script:post-response {
+    const resources = res.getBody();
+    let ids = [];
+    if (Array.isArray(resources)) {
+	resources.forEach(r => {
+	    console.log("Found Resource: " + r.name);
+	    ids.push (r.id);
+	});
+    }
+    bru.setVar("idsToDelete", ids);
+}
+
+
