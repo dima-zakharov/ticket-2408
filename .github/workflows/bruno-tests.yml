@@ -79,12 +79,14 @@ jobs:
           fi
 
       - name: Upload Pages Artifact
-        if: always() && github.ref == 'refs/heads/main'  # Add 'always() &&' here
+        # This ensures the report is uploaded even if tests fail
+        if: always() && github.ref == 'refs/heads/main' 
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'public'
 
       - name: Deploy to GitHub Pages
-        if: always() && github.ref == 'refs/heads/main'  # Add 'always() &&' here
+        # This ensures the deployment triggers even if tests fail
+        if: always() && github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
