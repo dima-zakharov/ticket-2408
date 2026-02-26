@@ -1,147 +1,159 @@
-# SSRF Security Tests - Bruno Collection
+# SSRF Test Scenarios - Bruno Collection
 
-This is a Bruno collection for testing SSRF (Server-Side Request Forgery) protection in the MCP Gateway.
+This directory contains SSRF (Server-Side Request Forgery) test scenarios executed using the Bruno CLI tool against the MCP Gateway.
 
-## Prerequisites
+## Overview
 
-1. Install Bruno: https://www.usebruno.com/downloads
-2. Gateway must be running on `http://localhost:4444`
-3. Valid JWT token in `bruno.env`
+The test suite validates SSRF vulnerabilities by attempting to access internal metadata endpoints, private IP ranges, and localhost resources through the gateway.
 
-## Test Coverage
+## Test Structure
 
-| File | Test Cases | Description |
-|------|------------|-------------|
-| `01-aws-metadata.bru` | TC-SSRF-001 | AWS metadata endpoint protection |
-| `02-private-ips.bru` | TC-SSRF-004 | Private IP range blocking (10/8, 172.16/12, 192.168/16) |
-| `03-localhost.bru` | TC-SSRF-005 | Localhost and 0.0.0.0 blocking |
-| `04-dangerous-protocols.bru` | TC-SSRF-007 | Protocol blocking (file, gopher, dict, ldap) |
+```mermaid
+flowchart TD
+    A[data.csv<br/>Test Data] --> B[bru CLI Tool]
+    C[TC-SSRF-01-create.bru<br/>Create Resource Request] --> B
+    D[TC-SSRF-02-delete.bru<br/>Delete Resource Request] --> B
+    B --> E[mcpgateway<br/>Target Server]
+    E --> F{Response}
+    F --> G[results.html<br/>Test Report]
+    
+    subgraph "Test Flow"
+        A
+        C
+        D
+        B
+        E
+        F
+        G
+    end
+    
+    style A fill:#e1f5fe
+    style C fill:#fff3e0
+    style D fill:#fff3e0
+    style E fill:#f3e5f5
+    style G fill:#e8f5e9
+```
 
-## Running Tests
+## Files
 
-### Using Bruno CLI
+| File | Description |
+|------|-------------|
+| `collection.bru` | Collection configuration with shared headers (Content-Type, Authorization) |
+| `TC-SSRF-01-create.bru` | Creates resources with SSRF payloads, expects 400 response |
+| `TC-SSRF-02-delete.bru` | Deletes created resources, expects 200 response |
+| `data.csv` | Test data matrix with SSRF endpoints |
+| `run-bruno-tests.sh` | Test execution script |
+| `results.html` | Generated HTML test report |
+
+## Test Cases
+
+### TC-SSRF-01: Create Resource (SSRF Payloads)
+
+**Purpose:** Attempt to create resources pointing to internal/metadata endpoints
+
+**Expected Result:** HTTP 400 (Bad Request) - Gateway should block SSRF attempts
+
+**Test Data Categories:**
+
+1. **AWS Metadata Endpoints**
+   - `/latest/meta-data/` - Instance metadata
+   - `/latest/meta-data/iam/security-credentials/` - IAM credentials
+   - `/latest/user-data` - User data
+
+2. **GCP Metadata Endpoints**
+   - `metadata.google.internal/computeMetadata/v1/`
+   - `169.254.169.254/computeMetadata/v1/`
+
+3. **Azure Metadata Endpoints**
+   - `/metadata/instance?api-version=2021-02-01`
+   - `/metadata/identity/oauth2/token`
+
+4. **Private IP Ranges**
+   - `10.0.0.0/8` range
+   - `172.16.0.0/12` range
+   - `192.168.0.0/16` range
+
+5. **Localhost Variants**
+   - `127.0.0.1`
+   - `localhost`
+   - `127.x.x.x` variants
+   - `0.0.0.0`
+
+### TC-SSRF-02: Delete Resource
+
+**Purpose:** Clean up resources created during test execution
+
+**Expected Result:** HTTP 200 (OK)
+
+## Data Flow
+
+The `data.csv` file provides test parameters for each scenario:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ data.csv                                                    │
+│ ┌─────────────────────────┬─────────────┬─────────────────┐ │
+│ │ uri                     │ name        │ description     │ │
+│ ├─────────────────────────┼─────────────┼─────────────────┤ │
+│ │ http://169.254.169.254  │ aws-metadata│ Step 1: ...     │ │
+│ │ ...                     │ ...         │ ...             │ │
+│ └─────────────────────────┴─────────────┴─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ bru CLI Tool                                                │
+│ - Reads CSV data                                            │
+│ - Substitutes {{uri}}, {{name}}, {{description}}            │
+│ - Executes test requests                                    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ mcpgateway ({{BASE_URL}}/resources)                         │
+│ - Receives resource creation requests                       │
+│ - Validates/blocks SSRF attempts                            │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ results.html                                                │
+│ - HTML test report                                          │
+│ - Pass/fail status for each test case                       │
+│ - Response details and timing                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Usage
+
+### Prerequisites
+
+- Bruno CLI (`bru`) installed
+- Access to the MCP Gateway
+- Valid authentication token
+
+### Running Tests
 
 ```bash
-# Install bru CLI
-npm install -g @usebruno/cli
+# Set environment variables
+export BASE_URL=<gateway-url>
+export TOKEN=<auth-token>
 
-# Run all tests
-bru run ./bruno-ssrf-tests --env Default
-
-# Run specific test file
-bru run ./bruno-ssrf-tests/01-aws-metadata.bru --env Default
+# Execute tests
+./run-bruno-tests.sh
 ```
 
-### Using Bruno UI
+### Environment Variables
 
-1. Open Bruno
-2. Click "Import Collection"
-3. Select the `bruno-ssrf-tests` folder
-4. Select the "Default" environment
-5. Click "Run Collection"
+| Variable | Description |
+|----------|-------------|
+| `BASE_URL` | MCP Gateway base URL |
+| `TOKEN` | Bearer token for authentication |
 
-### Using Shell Script (No Bruno required)
+## Output
 
-```bash
-cd bruno-ssrf-tests
-./run-tests.sh
-```
-
-## Expected Results
-
-All SSRF protection tests should return:
-- **Status 400** (Bad Request) or **403** (Forbidden)
-- Response body should contain SSRF protection keywords
-
-## Environment Variables
-
-Edit `bruno.env` to configure:
-
-```json
-{
-  "base_url": "http://localhost:4444",
-  "token": "your-jwt-token-here"
-}
-```
-
-## Generate New Token
-
-```bash
-source ./00-env.sh
-echo $TOKEN
-```
-
-Update `bruno.env` with the new token value.
-
-## Starting Gateway with SSRF Protection
-
-The gateway must be restarted with SSRF environment variables:
-
-```bash
-# Stop existing gateway
-pkill -f mcpgateway
-
-# Start with SSRF protection
-SSRF_PROTECTION_ENABLED=true \
-SSRF_BLOCK_PRIVATE_IPS=true \
-SSRF_BLOCK_LOCALHOST=true \
-SSRF_BLOCK_CLOUD_METADATA=true \
-SSRF_ALLOWED_PROTOCOLS=http,https \
-make dev
-```
-
-## Test Format
-
-Each `.bru` file contains one or more test requests in Bruno's declarative format:
-
-```bru
-meta {
-  name: Test Name
-  method: POST
-  seq: 1
-}
-
-get {
-  url: {{base_url}}/resources/
-  req {
-    headers {
-      Authorization: Bearer {{token}}
-      Content-Type: application/json
-    }
-    body {
-      json {
-        resource {
-          uri: http://malicious-url/
-          name: test-name
-          content: test
-        }
-      }
-    }
-  }
-
-  assert {
-    res.status in [400, 403]
-    res.body ~ /SSRF|blocked/i
-  }
-}
-```
-
-## Troubleshooting
-
-### Tests failing with 401
-- Token expired - generate new token and update `bruno.env`
-
-### Tests failing with 404
-- Check gateway is running: `curl http://localhost:4444/health`
-- Verify endpoint path is correct
-
-### Tests returning 200 instead of 400/403
-- Gateway not started with SSRF protection enabled
-- Restart gateway with SSRF environment variables (see above)
-
-## Related Files
-
-- `ssrf-cloud-metadata.yaml` - Original Nuclei template
-- `ssrf-private-ips.yaml` - Original Nuclei template
-- `00-env.sh` - Environment configuration
-- `run-scenarios.sh` - Nuclei test runner
+Test results are generated in `results.html` containing:
+- Test execution summary
+- Pass/fail status per test case
+- Request/response details
+- Execution timing
