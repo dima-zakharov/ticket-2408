@@ -1,0 +1,81 @@
+name: Bruno Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+
+      - name: Install project dependencies
+        run: uv sync
+
+      - name: Set up environment
+        run: |
+          source ./00-env.sh
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Start MCP Gateway Server
+        run: |
+          make start
+          echo "Waiting for server to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4444/health > /dev/null 2>&1; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: Run Bruno Tests
+        run: make test-bruno
+
+      - name: Stop MCP Gateway Server
+        run: make stop
+        if: always()
+
+      - name: Upload Bruno Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bruno-test-report
+          path: bruno-scenarios/results.html
+          retention-days: 7
+
+      - name: Display Test Report
+        if: always()
+        run: |
+          if [ -f bruno-scenarios/results.html ]; then
+            echo "## Bruno Test Report" >> $GITHUB_STEP_SUMMARY
+            echo '```html' >> $GITHUB_STEP_SUMMARY
+            cat bruno-scenarios/results.html >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
