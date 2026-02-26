@@ -35,6 +35,11 @@ jobs:
       - name: Install project dependencies
         run: uv sync
 
+      - name: Create password file
+        run: |
+          mkdir -p ~/.local
+          openssl rand -hex 32 > ~/.local/ticket-2408-pass
+
       - name: Set up environment
         run: |
           source ./00-env.sh
