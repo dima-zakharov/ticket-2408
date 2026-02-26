@@ -79,12 +79,19 @@ jobs:
           fi
 
       - name: Upload Pages Artifact
-        if: always() # Removes the 'main' branch restriction
+        if: always() 
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'public'
 
       - name: Deploy to GitHub Pages
-        if: always() # Removes the 'main' branch restriction
+        if: always()
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Add Link to Summary
+        if: always()
+        run: |
+          echo "### 🚀 Test Report Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "The Bruno test results are available here:" >> $GITHUB_STEP_SUMMARY
+          echo "[View Report](https://dima-zakharov.github.io/ticket-2408/)" >> $GITHUB_STEP_SUMMARY
