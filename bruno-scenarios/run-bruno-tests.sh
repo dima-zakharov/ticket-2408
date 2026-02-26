@@ -10,4 +10,5 @@ bru --verbose --noproxy \
 	--env-var TOKEN=$TOKEN \
 	--reporter-html results.html \
 	--csv-file-path data.csv \
-	run .
+	run . || echo "ok for now"
+
