@@ -1,0 +1,39 @@
+meta {
+  name: resource-test
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/resources
+  body: json
+}
+
+body:json {
+  {
+    "resource": {
+      "uri": "{{uri}}",
+      "name": "{{name}}",
+      "description": "{{description}}",
+      "content": "{{uri}}"
+    }
+  }
+}
+
+assert {
+  res.status: in [400]
+}
+
+
+script:post-response {
+    const body = res.getBody();
+    if (body && body.id) {
+        console.log("Created resource: " + body.name + " " + body.id);
+        bru.setVar("delId", body.id);
+    } else {
+	console.log("Resource creation failed or ID missing. Skipping deletion.");
+	bru.setVar("delId", null);
+    }
+}
+
+
