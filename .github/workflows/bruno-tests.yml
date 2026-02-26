@@ -87,13 +87,14 @@ jobs:
           cp bruno-scenarios/results.html public/index.html
 
       - name: Upload Pages Artifact
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'public'
+          path: 'public'  # This must contain your index.html
 
       - name: Deploy to GitHub Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/main'
+        id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Display Test Report
