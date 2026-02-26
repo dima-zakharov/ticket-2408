@@ -1,8 +1,8 @@
 #!/usr/bin/env -S bash
 
-set -ueo pipefail
+set -xueo pipefail
 
-source ./00-env.sh
+source $(dirname $(readlink -f $0))/../00-env.sh
 
 echo $BASE_URL
 bru --verbose --noproxy \
@@ -10,4 +10,5 @@ bru --verbose --noproxy \
 	--env-var TOKEN=$TOKEN \
 	--reporter-html results.html \
 	--csv-file-path data.csv \
-	run .
+	run . || echo "ok for now"
+

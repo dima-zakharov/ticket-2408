@@ -1,0 +1,92 @@
+name: Bruno Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+
+      - name: Install project dependencies
+        run: uv sync
+
+      - name: Create password file
+        run: |
+          mkdir -p ~/.local
+          openssl rand -hex 32 > ~/.local/ticket-2408-pass
+
+      - name: Set up environment
+        run: |
+          source ./00-env.sh
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Start MCP Gateway Server
+        run: |
+          make start
+          echo "Waiting for server to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4444/health > /dev/null 2>&1; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: Run Bruno Tests
+        run: make test-bruno
+        # This will fail the job, which is good, but we need the next steps to run anyway
+
+      - name: Prepare Report for Pages
+        if: always() # <--- CRITICAL: Runs even if tests fail
+        run: |
+          mkdir -p public
+          # Copy only if the file exists to avoid errors
+          if [ -f bruno-scenarios/results.html ]; then
+            cp bruno-scenarios/results.html public/index.html
+          fi
+
+      - name: Upload Pages Artifact
+        # This ensures the report is uploaded even if tests fail
+        if: always() && github.ref == 'refs/heads/main' 
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public'
+
+      - name: Deploy to GitHub Pages
+        # This ensures the deployment triggers even if tests fail
+        if: always() && github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v4
