@@ -1,4 +1,16 @@
-uri,name,description
-http://169.254.169.254/latest/meta-data/,aws-metadata,Step 1: Direct metadata access
-http://169.254.169.254/latest/meta-data/iam/security-credentials/,aws-iam-creds,Step 2: IAM credentials endpoint
-http://169.254.169.254/latest/user-data,aws-user-data,Step 3: User data endpoint
+uri,                                                               name,               description
+http://169.254.169.254/latest/meta-data/,                          aws-metadata,       Step 1: Direct metadata access
+http://169.254.169.254/latest/meta-data/iam/security-credentials/, aws-iam-creds,      Step 2: IAM credentials endpoint
+http://169.254.169.254/latest/user-data,                           aws-user-data,      Step 3: User data endpoint
+http://metadata.google.internal/computeMetadata/v1/,               google-metadata,    Step 1: GCP metadata endpoint
+http://169.254.169.254/computeMetadata/v1/,                        google-metadata-ip, Step 2: GCP metadata by IP
+http://169.254.169.254/metadata/instance?api-version=2021-02-01,   azure-imds,         Step 1: Azure IMDS endpoint
+http://169.254.169.254/metadata/identity/oauth2/token,             azure-id,           Step 2: Azure identity endpoint
+http://10.0.0.1/admin,                                             priv-range1,        Step 1: 10.0.0.0/8 range
+http://172.16.0.1/internal,                                        priv-range2,        Step 2: 172.16.0.0/12 range
+http://192.168.1.1/,                                               priv-range3,        Step 3: 192.168.0.0/16 range
+http://172.31.255.255/,                                            priv-edge,          Step 4: Edge of range (172.31.255.255)
+http://127.0.0.1:8000/admin,                                       local-ip,           Step 1: 127.0.0.1
+http://localhost:3000/,                                            localhost,          Step 2: localhost hostname
+http://127.0.0.2/,                                                 local-ip-variants,  Step 3: 127.x.x.x variations
+http://0.0.0.0:8080/,                                              local-0,            Step 4: 0.0.0.0
