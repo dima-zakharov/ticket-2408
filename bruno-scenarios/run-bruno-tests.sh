@@ -1,6 +1,6 @@
 #!/usr/bin/env -S bash
 
-set -ueo pipefail
+set -xueo pipefail
 
 source $(dirname $(readlink -f $0))/00-env.sh
 
