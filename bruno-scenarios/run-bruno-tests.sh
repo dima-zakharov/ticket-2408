@@ -2,7 +2,7 @@
 
 set -ueo pipefail
 
-source ./00-env.sh
+source $(dirname $(readlink -f $0))/00-env.sh
 
 echo $BASE_URL
 bru --verbose --noproxy \
