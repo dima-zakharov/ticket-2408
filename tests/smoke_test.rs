@@ -39,8 +39,7 @@ struct DeleteResponse {
 
 #[tokio::test]
 async fn smoke_test_health() {
-    let base = base_url();
-    let request = Request::get(path![&base, "health"]).with_body(());
+    let request = Request::get(path![Box::leak(format!("{}/health", base_url()).into_boxed_str())]).with_body(());
 
     let body: HealthResponse = context()
         .run(request)
@@ -53,7 +52,7 @@ async fn smoke_test_health() {
 
 #[tokio::test]
 async fn smoke_test_resources_full_flow() {
-    let base = base_url();
+    let base: &'static str = Box::leak(base_url().into_boxed_str());
     let auth_token = token();
     let ctx = context();
 
@@ -69,7 +68,7 @@ async fn smoke_test_resources_full_flow() {
         },
     };
 
-    let create_request = Request::post(path![&base, "resources"])
+    let create_request = Request::post(path![base, "resources"])
         .with_header("Authorization", &format!("Bearer {}", auth_token))
         .with_body(&create_payload);
 
@@ -80,7 +79,7 @@ async fn smoke_test_resources_full_flow() {
         .await;
 
     // 2. List resources
-    let list_request = Request::get(path![&base, "resources"])
+    let list_request = Request::get(path![base, "resources"])
         .with_header("Authorization", &format!("Bearer {}", auth_token))
         .with_body(());
 
@@ -98,19 +97,27 @@ async fn smoke_test_resources_full_flow() {
 
     let resource_id = &target.id;
 
-    // 3. Delete resource (using POST with _method override since restest doesn't support DELETE)
-    // Note: restest 0.1.0 only supports GET and POST. For DELETE, we'll use grillon instead.
-    use grillon::{HttpMethod, Grillon};
-    
-    let delete_response: DeleteResponse = Grillon::new()
-        .base_url(&base)
-        .request(HttpMethod::Delete)
-        .path(&format!("/resources/{}", resource_id))
-        .header("Authorization", &format!("Bearer {}", auth_token))
-        .send()
+    // 3. Delete resource using grillon
+    use grillon::Grillon;
+    use serde_json::Value;
+
+    let auth_header = format!("Bearer {}", auth_token);
+    let assert = Grillon::new(&base)
+        .unwrap()
+        .delete(&format!("/resources/{}", resource_id))
+        .headers(vec![(
+            "Authorization",
+            auth_header.as_str(),
+        )])
+        .assert()
         .await
-        .expect_status(StatusCode::OK)
-        .await;
+        .status(grillon::dsl::http::is_success());
+
+    let json_value: Value = assert.json
+        .expect("Expected JSON response")
+        .expect("Response body is empty");
+    let delete_response: DeleteResponse = serde_json::from_value(json_value)
+        .expect("Failed to deserialize response");
 
     assert_eq!(delete_response.status, "success");
 }
