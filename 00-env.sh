@@ -15,6 +15,7 @@ export SSRF_ALLOW_LOCALHOST=false
 export SSRF_ALLOW_PRIVATE_NETWORKS=false
 export SSRF_ALLOWED_NETWORKS='["10.20.0.0/16","192.168.50.0/24"]'
 export SSRF_DNS_FAIL_CLOSED=true
+export SECURE_COOKIES=false
 
 export PYTHONWARNINGS="ignore"
 export LOG_LEVEL="ERROR"
@@ -33,6 +34,8 @@ export TOKEN="$(
 )"
 
 echo $TOKEN > ~/.local/ticket-2408.token
+
+yq -P -o json ".cookies[0].value = \"$TOKEN\"" auth.json.template > ~/.local/ticket-2408-auth.json
 
 export HEADERS=(
 	-H "Authorization: Bearer $TOKEN"

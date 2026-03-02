@@ -1,0 +1,20 @@
+{
+  "cookies": [
+    {
+      "name": "jwt_token",
+      "value": "",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:4444",
+      "localStorage": []
+    }
+  ]
+}
