@@ -1,6 +1,7 @@
 # SSRF Test Scenarios - Bruno Collection
 
-This directory contains SSRF (Server-Side Request Forgery) test scenarios executed using the Bruno CLI tool against the MCP Gateway.
+This directory contains SSRF (Server-Side Request Forgery) test scenarios executed using the Bruno CLI tool against the MCP Gateway.\
+https://github.com/IBM/mcp-context-forge/issues/2408
 
 ## Overview
 
